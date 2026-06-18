@@ -4,6 +4,23 @@ import math
 
 
 class PoseDetector:
+    # Добавь этот метод внутрь класса PoseDetector в core/detector.py
+    def find_vector_angle(self, p1, p2):
+        """
+        Считает угол наклона прямой между точками p1 и p2 относительно горизонта.
+        0 градусов - горизонтальная линия.
+        90 градусов - вертикальная.
+        """
+        if len(self.lm_list) < p2:
+            return 0
+
+        x1, y1 = self.lm_list[p1][1:]
+        x2, y2 = self.lm_list[p2][1:]
+
+        # Считаем угол вектора
+        angle = math.degrees(math.atan2(y2 - y1, x2 - x1))
+        return angle
+
     def __init__(self, mode=False, complexity=1, smooth=True,
                  detection_con=0.5, track_con=0.5):
 
@@ -25,6 +42,8 @@ class PoseDetector:
             min_tracking_confidence=self.track_con
         )
         self.lm_list = []
+
+
 
     def find_pose(self, img, draw=True):
         img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
