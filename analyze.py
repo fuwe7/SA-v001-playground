@@ -25,12 +25,34 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="сохранить результат в JSON-файл",
     )
+    parser.add_argument(
+        "--show",
+        action="store_true",
+        help="показать видео со скелетом и окно статистики (live-окна, нужен GUI)",
+    )
+    parser.add_argument(
+        "--save-video",
+        dest="save_video",
+        default=None,
+        help="сохранить аннотированное видео (скелет + панель статистики) в файл",
+    )
     args = parser.parse_args(argv)
 
     video = Path(args.video)
     if not video.exists():
         print(f"Файл не найден: {video}", file=sys.stderr)
         return 1
+
+    if args.show or args.save_video:
+        from core.visualizer import run_visualization
+
+        if args.save_video:
+            print(f">>> Визуализация -> {args.save_video}")
+        if args.show:
+            print(">>> Открываю окна (нажми 'q' в окне видео, чтобы выйти) ...")
+        logic = run_visualization(video, show=args.show, save_path=args.save_video)
+        print(f"Найдено бросков: {logic.shot_count}")
+        return 0
 
     print(f">>> Анализирую {video} ...")
     result = analyze_video(video)
