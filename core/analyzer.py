@@ -13,6 +13,7 @@ from typing import Callable
 
 import cv2
 
+from core.biomechanics import compute_joint_angles
 from core.detector import PoseDetector
 from core.state_machine import ShotDetector
 
@@ -89,7 +90,10 @@ def analyze_video(
                 shoulder_y = lm_list[R_SHOULDER][2]
                 wrist_y = lm_list[R_WRIST][2]
 
-                logic.check_shot(elbow_angle, knee_angle, feet_diff, wrist_y, shoulder_y)
+                registered = logic.check_shot(elbow_angle, knee_angle, feet_diff, wrist_y, shoulder_y)
+                if registered:
+                    world_lm = detector.find_world_position()
+                    logic.session_data[-1]["angles_3d"] = compute_joint_angles(world_lm)
 
             if on_progress is not None:
                 on_progress(frames_total)
