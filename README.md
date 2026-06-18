@@ -32,6 +32,16 @@ python analyze.py path/to/shot.mp4
 python analyze.py path/to/shot.mp4 --json result.json
 ```
 
+### Визуализация (видео + скелет + статистика)
+
+```bash
+# живые окна: видео со скелетом + окно "Live Stats" (выход — клавиша q)
+python analyze.py path/to/shot.mp4 --show
+
+# то же самое, но записать в файл (работает и без дисплея):
+python analyze.py path/to/shot.mp4 --save-video annotated.mp4
+```
+
 Пример вывода:
 
 ```
@@ -56,6 +66,7 @@ core/
   detector.py        # PoseDetector — обёртка над MediaPipe Pose
   state_machine.py   # ShotDetector — фазы броска и метрики
   analyzer.py        # analyze_video() — единый пайплайн (источник правды)
+  visualizer.py      # видео + скелет + панель статистики (--show / --save-video)
   ball_tracker.py    # экспериментально, пока НЕ подключено (трекинг мяча, Этап 5)
 analyze.py           # CLI-вход
 tests/               # smoke-тесты
