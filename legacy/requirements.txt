@@ -1,0 +1,10 @@
+# Зависимости для старых прототипов в legacy/ (не поддерживаются).
+opencv-python
+mediapipe
+numpy
+pandas
+matplotlib
+streamlit
+plotly
+# для экспериментального трекинга мяча (core/ball_tracker.py):
+ultralytics

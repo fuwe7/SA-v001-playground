@@ -9,6 +9,13 @@ __pycache__/
 
 # Data
 *.mp4
+*.mov
+
+# ML model weights (качаются по требованию, не храним в git)
+*.pt
+
+# Локальные результаты анализа
+result*.json
 
 # IDE
 .vscode/
