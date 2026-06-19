@@ -16,6 +16,7 @@ import cv2
 from core.biomechanics import compute_joint_angles
 from core.detector import PoseDetector
 from core.state_machine import ShotDetector
+from core.view import ViewAggregator
 
 # Индексы ключевых точек MediaPipe Pose (правая сторона — основная для броска)
 R_SHOULDER, R_ELBOW, R_WRIST = 12, 14, 16
@@ -36,6 +37,8 @@ class AnalysisResult:
     frames_with_pose: int
     shots: int
     session_data: list
+    view: str
+    view_confidence: float
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -63,6 +66,7 @@ def analyze_video(
 
     detector = PoseDetector()
     logic = ShotDetector()
+    view_agg = ViewAggregator()
 
     frames_total = 0
     frames_with_pose = 0
@@ -79,6 +83,8 @@ def analyze_video(
 
             if len(lm_list) >= POSE_LANDMARK_COUNT:
                 frames_with_pose += 1
+                world_lm = detector.find_world_position()
+                view_agg.update(world_lm)
 
                 elbow_angle = detector.find_angle(img, R_SHOULDER, R_ELBOW, R_WRIST, draw=False)
                 knee_angle = detector.find_angle(img, R_HIP, R_KNEE, R_ANKLE, draw=False)
@@ -92,7 +98,6 @@ def analyze_video(
 
                 registered = logic.check_shot(elbow_angle, knee_angle, feet_diff, wrist_y, shoulder_y)
                 if registered:
-                    world_lm = detector.find_world_position()
                     logic.session_data[-1]["angles_3d"] = compute_joint_angles(world_lm)
 
             if on_progress is not None:
@@ -100,10 +105,13 @@ def analyze_video(
     finally:
         cap.release()
 
+    view, view_confidence = view_agg.result()
     return AnalysisResult(
         video_path=str(video_path),
         frames_total=frames_total,
         frames_with_pose=frames_with_pose,
         shots=logic.shot_count,
         session_data=logic.session_data,
+        view=view,
+        view_confidence=view_confidence,
     )
