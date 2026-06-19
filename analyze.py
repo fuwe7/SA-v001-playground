@@ -69,6 +69,12 @@ def main(argv: list[str] | None = None) -> int:
                 f"{s['id']:<2} | {s['elbow_release']:<5} | "
                 f"{s['knee_load']:<9} | {s['feet_diff']:<9} | {s['grade']}"
             )
+            angles = s.get("angles_3d")
+            if angles:
+                print("     3D-углы (град):")
+                for name, value in angles.items():
+                    shown = "н/д" if value is None else value
+                    print(f"       {name:<16}: {shown}")
 
     if args.json_out:
         Path(args.json_out).write_text(

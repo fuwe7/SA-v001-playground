@@ -42,8 +42,7 @@ class PoseDetector:
             min_tracking_confidence=self.track_con
         )
         self.lm_list = []
-
-
+        self.world_lm_list = []
 
     def find_pose(self, img, draw=True):
         img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -68,6 +67,19 @@ class PoseDetector:
                 if draw:
                     cv2.circle(img, (cx, cy), 5, (255, 0, 0), cv2.FILLED)
         return self.lm_list
+
+    def find_world_position(self):
+        """Возвращает 3D world landmarks: [id, x, y, z, visibility].
+
+        Координаты в метрах с началом в центре бёдер. Углы, посчитанные по этим
+        точкам, устойчивы к ракурсу камеры (в отличие от плоских пиксельных углов).
+        """
+        self.world_lm_list = []
+        world = getattr(self.results, "pose_world_landmarks", None)
+        if world:
+            for id, lm in enumerate(world.landmark):
+                self.world_lm_list.append([id, lm.x, lm.y, lm.z, lm.visibility])
+        return self.world_lm_list
 
     def find_angle(self, img, p1, p2, p3, draw=True):
         """

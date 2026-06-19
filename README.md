@@ -56,8 +56,12 @@ python analyze.py path/to/shot.mp4 --save-video annotated.mp4
 3  | 142   | 158       | 9         | Short Arm (No Legs)
 ```
 
+Для каждого засчитанного броска дополнительно считается набор **3D-углов суставов**
+(обе руки, плечи, бёдра, оба колена, наклон корпуса) по world landmarks MediaPipe —
+они устойчивее к ракурсу. Углы суставов, которые в данном ракурсе плохо видно,
+помечаются `н/д` (в JSON — `null`). Виден в выводе CLI и в `--json`.
+
 Лучшие результаты — если снимать **сбоку** (виден угол локтя и колена).
-Устойчивость к произвольному ракурсу появится на Этапе 1 (см. roadmap).
 
 ## Структура
 
@@ -66,6 +70,7 @@ core/
   detector.py        # PoseDetector — обёртка над MediaPipe Pose
   state_machine.py   # ShotDetector — фазы броска и метрики
   analyzer.py        # analyze_video() — единый пайплайн (источник правды)
+  biomechanics.py    # 3D-углы суставов по world landmarks (устойчивы к ракурсу)
   visualizer.py      # видео + скелет + панель статистики (--show / --save-video)
   ball_tracker.py    # экспериментально, пока НЕ подключено (трекинг мяча, Этап 5)
 analyze.py           # CLI-вход
