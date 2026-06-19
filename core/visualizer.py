@@ -16,6 +16,7 @@ from pathlib import Path
 import cv2
 import numpy as np
 
+from core.biomechanics import compute_joint_angles
 from core.detector import PoseDetector
 from core.state_machine import ShotDetector
 
@@ -37,6 +38,13 @@ POSE_LANDMARK_COUNT = 33
 STATS_WIDTH = 400
 
 
+def _fmt_deg(value) -> str:
+    """Форматирует угол для панели (Hershey-шрифт OpenCV не умеет кириллицу)."""
+    if value is None:
+        return "N/A"
+    return f"{int(round(value))} deg"
+
+
 def draw_skeleton(img, lm_list) -> None:
     """Рисует полный скелет (обе стороны тела)."""
     if not lm_list:
@@ -54,14 +62,19 @@ def draw_skeleton(img, lm_list) -> None:
 
 
 def render_stats_panel(metrics: dict, height: int, width: int = STATS_WIDTH):
-    """Рисует панель «Live Stats» с метриками."""
+    """Рисует панель «Live Stats» с метриками (раскладка подстраивается под число метрик)."""
     board = np.zeros((height, width, 3), dtype=np.uint8)
     cv2.rectangle(board, (0, 0), (width, 70), (30, 30, 30), -1)
     cv2.putText(board, "LIVE STATS", (20, 45), cv2.FONT_HERSHEY_DUPLEX, 0.9, (255, 255, 255), 1)
 
-    y = 120
+    top = 95
+    n = max(1, len(metrics))
+    step = min(76, max(46, (height - top - 16) // n))
+    val_scale = 0.9 if step >= 70 else 0.7
+
+    y = top
     for key, value in metrics.items():
-        cv2.putText(board, str(key), (20, y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (150, 150, 150), 1)
+        cv2.putText(board, str(key), (20, y), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (150, 150, 150), 1)
         val_str = str(value)
         color = (255, 255, 255)
         if any(w in val_str for w in ("Great", "Good", "PERFECT", "RELEASE")):
@@ -70,9 +83,11 @@ def render_stats_panel(metrics: dict, height: int, width: int = STATS_WIDTH):
             color = (0, 0, 255)
         elif any(w in val_str for w in ("PREP", "Load")):
             color = (0, 255, 255)
-        cv2.putText(board, val_str, (20, y + 32), cv2.FONT_HERSHEY_SIMPLEX, 0.9, color, 2)
-        y += 80
-        cv2.line(board, (20, y - 22), (width - 20, y - 22), (50, 50, 50), 1)
+        elif val_str == "N/A":
+            color = (120, 120, 120)
+        cv2.putText(board, val_str, (20, y + 26), cv2.FONT_HERSHEY_SIMPLEX, val_scale, color, 2)
+        y += step
+        cv2.line(board, (20, y - 18), (width - 20, y - 18), (50, 50, 50), 1)
     return board
 
 
@@ -85,7 +100,8 @@ def annotate_frame(detector: PoseDetector, logic: ShotDetector, img):
     lm_list = detector.find_position(img, draw=False)
 
     metrics = {"STATUS": "Waiting", "SHOTS": logic.shot_count,
-               "ELBOW": "--", "KNEE": "--", "FEET DIFF": "--"}
+               "R ELBOW": "--", "L ELBOW": "--", "R KNEE": "--",
+               "L KNEE": "--", "TORSO LEAN": "--"}
 
     if len(lm_list) >= POSE_LANDMARK_COUNT:
         draw_skeleton(img, lm_list)
@@ -100,12 +116,15 @@ def annotate_frame(detector: PoseDetector, logic: ShotDetector, img):
         wrist_y = lm_list[R_WRIST][2]
         logic.check_shot(elbow, knee, feet_diff, wrist_y, shoulder_y)
 
+        angles = compute_joint_angles(detector.find_world_position())
         metrics = {
             "STATUS": logic.feedback or logic.state,
             "SHOTS": logic.shot_count,
-            "ELBOW": f"{int(elbow)} deg",
-            "KNEE": f"{int(knee)} deg",
-            "FEET DIFF": f"{int(feet_diff)} deg",
+            "R ELBOW": _fmt_deg(angles["right_elbow"]),
+            "L ELBOW": _fmt_deg(angles["left_elbow"]),
+            "R KNEE": _fmt_deg(angles["right_knee"]),
+            "L KNEE": _fmt_deg(angles["left_knee"]),
+            "TORSO LEAN": _fmt_deg(angles["torso_lean"]),
         }
 
     cv2.putText(img, f"Shots: {logic.shot_count}", (30, 60),
