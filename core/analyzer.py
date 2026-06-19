@@ -15,6 +15,7 @@ import cv2
 
 from core.biomechanics import compute_joint_angles
 from core.detector import PoseDetector
+from core.kinematics import air_time, ankle_level, release_speed, wrist_world
 from core.state_machine import ShotDetector
 from core.view import ViewAggregator
 
@@ -39,6 +40,7 @@ class AnalysisResult:
     session_data: list
     view: str
     view_confidence: float
+    air_time: float
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -64,12 +66,17 @@ def analyze_video(
     if not cap.isOpened():
         raise FileNotFoundError(f"Не удалось открыть видео: {video_path}")
 
+    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+
     detector = PoseDetector()
     logic = ShotDetector()
     view_agg = ViewAggregator()
 
     frames_total = 0
     frames_with_pose = 0
+    times: list[float] = []
+    ankle_ys: list = []
+    wrists: list = []
 
     try:
         while True:
@@ -86,6 +93,10 @@ def analyze_video(
                 world_lm = detector.find_world_position()
                 view_agg.update(world_lm)
 
+                times.append(frames_total / fps)
+                ankle_ys.append(ankle_level(lm_list, img.shape[0]))
+                wrists.append(wrist_world(world_lm))
+
                 elbow_angle = detector.find_angle(img, R_SHOULDER, R_ELBOW, R_WRIST, draw=False)
                 knee_angle = detector.find_angle(img, R_HIP, R_KNEE, R_ANKLE, draw=False)
 
@@ -99,6 +110,8 @@ def analyze_video(
                 registered = logic.check_shot(elbow_angle, knee_angle, feet_diff, wrist_y, shoulder_y)
                 if registered:
                     logic.session_data[-1]["angles_3d"] = compute_joint_angles(world_lm)
+                    logic.session_data[-1]["release_speed"] = release_speed(
+                        times, wrists, len(times) - 1)
 
             if on_progress is not None:
                 on_progress(frames_total)
@@ -114,4 +127,5 @@ def analyze_video(
         session_data=logic.session_data,
         view=view,
         view_confidence=view_confidence,
+        air_time=air_time(times, ankle_ys),
     )

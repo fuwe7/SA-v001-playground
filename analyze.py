@@ -68,6 +68,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Кадров с распознанной позой: {result.frames_with_pose}")
     print(f"Ракурс: {result.view} (уверенность {result.view_confidence})")
     print(f"  {_VIEW_HINT.get(result.view, '')}")
+    print(f"Время в воздухе (макс. прыжок): {result.air_time} с")
     print(f"Найдено бросков: {result.shots}")
 
     if result.session_data:
@@ -78,6 +79,9 @@ def main(argv: list[str] | None = None) -> int:
                 f"{s['id']:<2} | {s['elbow_release']:<5} | "
                 f"{s['knee_load']:<9} | {s['feet_diff']:<9} | {s['grade']}"
             )
+            speed = s.get("release_speed")
+            if speed is not None:
+                print(f"     скорость выпуска кисти: {speed} м/с")
             angles = s.get("angles_3d")
             if angles:
                 print("     3D-углы (град):")
