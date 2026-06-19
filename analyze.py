@@ -12,6 +12,13 @@ import sys
 from pathlib import Path
 
 from core.analyzer import analyze_video
+from core.view import VIEW_ANGLED, VIEW_FRONT, VIEW_SIDE
+
+_VIEW_HINT = {
+    VIEW_SIDE: "сбоку — надёжны углы локтя/колена/бедра.",
+    VIEW_FRONT: "спереди/сзади — надёжны симметрия плеч и постановка стоп; углы сгиба менее точны.",
+    VIEW_ANGLED: "наискосок — для точных углов снимай строго сбоку.",
+}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -59,6 +66,8 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"Кадров всего: {result.frames_total}")
     print(f"Кадров с распознанной позой: {result.frames_with_pose}")
+    print(f"Ракурс: {result.view} (уверенность {result.view_confidence})")
+    print(f"  {_VIEW_HINT.get(result.view, '')}")
     print(f"Найдено бросков: {result.shots}")
 
     if result.session_data:

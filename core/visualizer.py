@@ -19,6 +19,7 @@ import numpy as np
 from core.biomechanics import compute_joint_angles
 from core.detector import PoseDetector
 from core.state_machine import ShotDetector
+from core.view import detect_view
 
 # Связи скелета MediaPipe Pose (туловище + обе руки + обе ноги)
 SKELETON_LINKS = [
@@ -99,7 +100,7 @@ def annotate_frame(detector: PoseDetector, logic: ShotDetector, img):
     detector.find_pose(img, draw=False)
     lm_list = detector.find_position(img, draw=False)
 
-    metrics = {"STATUS": "Waiting", "SHOTS": logic.shot_count,
+    metrics = {"STATUS": "Waiting", "SHOTS": logic.shot_count, "VIEW": "--",
                "R ELBOW": "--", "L ELBOW": "--", "R KNEE": "--",
                "L KNEE": "--", "TORSO LEAN": "--"}
 
@@ -116,10 +117,12 @@ def annotate_frame(detector: PoseDetector, logic: ShotDetector, img):
         wrist_y = lm_list[R_WRIST][2]
         logic.check_shot(elbow, knee, feet_diff, wrist_y, shoulder_y)
 
-        angles = compute_joint_angles(detector.find_world_position())
+        world_lm = detector.find_world_position()
+        angles = compute_joint_angles(world_lm)
         metrics = {
             "STATUS": logic.feedback or logic.state,
             "SHOTS": logic.shot_count,
+            "VIEW": detect_view(world_lm),
             "R ELBOW": _fmt_deg(angles["right_elbow"]),
             "L ELBOW": _fmt_deg(angles["left_elbow"]),
             "R KNEE": _fmt_deg(angles["right_knee"]),
