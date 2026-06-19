@@ -18,6 +18,7 @@ import numpy as np
 
 from core.biomechanics import compute_joint_angles
 from core.detector import PoseDetector
+from core.kinematics import LiveKinematics, ankle_level, wrist_world
 from core.state_machine import ShotDetector
 from core.view import detect_view
 
@@ -92,7 +93,8 @@ def render_stats_panel(metrics: dict, height: int, width: int = STATS_WIDTH):
     return board
 
 
-def annotate_frame(detector: PoseDetector, logic: ShotDetector, img):
+def annotate_frame(detector: PoseDetector, logic: ShotDetector, img,
+                   kin: "LiveKinematics | None" = None, t: float = 0.0):
     """Обрабатывает один кадр: детекция позы, скелет, метрики, обновление стейт-машины.
 
     Возвращает (annotated_img, metrics).
@@ -102,7 +104,8 @@ def annotate_frame(detector: PoseDetector, logic: ShotDetector, img):
 
     metrics = {"STATUS": "Waiting", "SHOTS": logic.shot_count, "VIEW": "--",
                "R ELBOW": "--", "L ELBOW": "--", "R KNEE": "--",
-               "L KNEE": "--", "TORSO LEAN": "--"}
+               "L KNEE": "--", "TORSO LEAN": "--",
+               "AIR TIME": "--", "REL SPEED": "--"}
 
     if len(lm_list) >= POSE_LANDMARK_COUNT:
         draw_skeleton(img, lm_list)
@@ -128,7 +131,13 @@ def annotate_frame(detector: PoseDetector, logic: ShotDetector, img):
             "R KNEE": _fmt_deg(angles["right_knee"]),
             "L KNEE": _fmt_deg(angles["left_knee"]),
             "TORSO LEAN": _fmt_deg(angles["torso_lean"]),
+            "AIR TIME": "--",
+            "REL SPEED": "--",
         }
+        if kin is not None:
+            kin.update(wrist_world(world_lm), ankle_level(lm_list, img.shape[0]), t)
+            metrics["AIR TIME"] = f"{kin.air_time:.2f} s"
+            metrics["REL SPEED"] = f"{kin.rel_speed:.1f} m/s"
 
     cv2.putText(img, f"Shots: {logic.shot_count}", (30, 60),
                 cv2.FONT_HERSHEY_DUPLEX, 1.4, (255, 100, 0), 3)
@@ -160,7 +169,9 @@ def run_visualization(video_path, show: bool = True, save_path: str | None = Non
 
     detector = PoseDetector()
     logic = ShotDetector()
+    kin = LiveKinematics()
     writer = None
+    frame_idx = 0
 
     try:
         while True:
@@ -168,7 +179,8 @@ def run_visualization(video_path, show: bool = True, save_path: str | None = Non
             if not ok:
                 break
 
-            img, metrics = annotate_frame(detector, logic, img)
+            img, metrics = annotate_frame(detector, logic, img, kin, frame_idx / fps)
+            frame_idx += 1
             stats_panel = render_stats_panel(metrics, height=img.shape[0])
 
             if save_path is not None:
