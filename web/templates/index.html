@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block body %}
+  {% if error %}<div class="err">{{ error }}</div>{% endif %}
+  <div class="card">
+    <form method="post" action="{{ url_for('analyze') }}" enctype="multipart/form-data">
+      <p>Видео любого ракурса (лучше всего — <b>сбоку</b>). Форматы: mp4, mov, avi, mkv, webm.</p>
+      <p><input type="file" name="video" accept="video/*" required></p>
+      <p><button type="submit">Анализировать</button></p>
+      <p class="sub">Обработка может занять несколько секунд — анализ идёт покадрово.</p>
+    </form>
+  </div>
+{% endblock %}

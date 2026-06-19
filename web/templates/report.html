@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% macro deg(v) %}{% if v is none %}<span class="na">н/д</span>{% else %}{{ v }}°{% endif %}{% endmacro %}
+{% block body %}
+  <p><a href="{{ url_for('index') }}">← загрузить другое видео</a></p>
+
+  <div class="card">
+    <h2 style="margin-top:0">Отчёт: {{ original }}</h2>
+    <div class="grid">
+      <div class="stat"><div class="k">Ракурс</div><div class="v">{{ r.result.view }}
+        <span class="na" style="font-size:0.9rem">({{ r.result.view_confidence }})</span></div></div>
+      <div class="stat"><div class="k">Броски</div><div class="v">{{ r.result.shots }}</div></div>
+      <div class="stat"><div class="k">Время в воздухе</div><div class="v">{{ r.result.air_time }} с</div></div>
+      <div class="stat"><div class="k">Кадров с позой</div>
+        <div class="v">{{ r.result.frames_with_pose }}/{{ r.result.frames_total }}</div></div>
+    </div>
+    {% if r.view_hint %}<p class="sub" style="margin-bottom:0">{{ r.view_hint }}</p>{% endif %}
+  </div>
+
+  {% if video_url %}
+  <div class="card">
+    <h3 style="margin-top:0">Видео со скелетом и статистикой</h3>
+    <video controls src="{{ video_url }}"></video>
+    <p class="sub"><a href="{{ video_url }}" download>скачать видео</a></p>
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <h3 style="margin-top:0">Броски</h3>
+    {% if r.shots %}
+    <table>
+      <tr><th>#</th><th>Оценка</th><th>Локоть (выпуск)</th><th>Колено (загрузка)</th>
+          <th>Стопы Δ</th><th>Скорость выпуска</th></tr>
+      {% for s in r.shots %}
+      <tr>
+        <td>{{ s.id }}</td><td>{{ s.grade }}</td>
+        <td>{{ s.elbow_release }}°</td><td>{{ s.knee_load }}°</td>
+        <td>{{ s.feet_diff }}°</td>
+        <td>{% if s.release_speed is defined %}{{ s.release_speed }} м/с{% else %}—{% endif %}</td>
+      </tr>
+      {% if s.angles_3d %}
+      <tr><td></td><td colspan="5">
+        <span class="na">3D-углы:</span>
+        R локоть {{ deg(s.angles_3d.right_elbow) }} ·
+        L локоть {{ deg(s.angles_3d.left_elbow) }} ·
+        R колено {{ deg(s.angles_3d.right_knee) }} ·
+        L колено {{ deg(s.angles_3d.left_knee) }} ·
+        наклон корпуса {{ deg(s.angles_3d.torso_lean) }}
+      </td></tr>
+      {% endif %}
+      {% endfor %}
+    </table>
+    {% else %}
+    <p class="sub">Бросков не обнаружено. Попробуйте видео, где виден полный бросок с выпуском мяча.</p>
+    {% endif %}
+  </div>
+{% endblock %}

@@ -17,6 +17,9 @@ __pycache__/
 # Локальные результаты анализа
 result*.json
 
+# Результаты веб-загрузок (Этап 1.5)
+web/_results/
+
 # IDE
 .vscode/
 .idea/
